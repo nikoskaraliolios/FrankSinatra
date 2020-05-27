@@ -1,0 +1,24 @@
+Test #1
+
+Number of tests: 1000
+Number of bandits: 15
+Initial uniform sampling number: 10
+Number of episodes: 10000
+Tests succeeded: 86.90%
+Average number of pulls: 10042.217
+The maximum pay loss was : 0.3478600225197428
+The mean pay loss was : 0.03694758021472977
+The std of pay loss was : 0.05128821743922207
+
+
+Test #2
+
+Number of tests: 1000
+Number of bandits: 15
+Initial uniform sampling number: 15
+Number of episodes: 10000
+Tests succeeded: 87.20%
+Average number of pulls: 10034.368
+The maximum pay loss was : 0.3635807767625588
+The mean pay loss was : 0.04269705807694173
+The std of pay loss was : 0.0586320214460071
