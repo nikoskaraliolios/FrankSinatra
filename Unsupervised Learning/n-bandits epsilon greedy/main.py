@@ -23,7 +23,7 @@ class Bandits():
         self.num_episodes = num_episodes
 
 
-        self.cut_off = 0.25
+        self.cut_off = 0.2
 
         self.bandits = np.random.uniform(self.bandit_range_low, self.bandit_range_high,
                                             self.num_bandits)
@@ -32,10 +32,13 @@ class Bandits():
         self.bandit_range = bandit_range_high - bandit_range_low
         self.bandit_idcs = range(self.num_bandits)
 
-        # obtain pull function with specified paramters
+        # self.normalized_bandits = (self.bandits - self.bandit_range_low)/self.bandit_range
+
 
         self.true_best_bandit = np.argmax(self.bandits)
-        self.optimal_pay = self.bandits[self.true_best_bandit]/self.bandit_range
+        self.optimal_pay = (self.bandits[self.true_best_bandit]- self.bandit_range_low)/self.bandit_range
+        # self.true_scnd_best_bandit = np.argmax(np.delete(self.bandits,self.true_best_bandit))
+        # self.scnd_best_pay = (self.bandits[self.true_scnd_best_bandit]- self.bandit_range_low)/self.bandit_range
 
 
     def pull(self, bandit: float):
@@ -49,6 +52,7 @@ class Bandits():
     def epsilon_greedy_pull(self, epsilon: float, best_bandit_idx: int,
                                 all_but_best_bandit_idcs: Vec_int):
         p = random.uniform(0,1)
+        # best_bandit_ = np.argmax(mean_pay)
         if p < epsilon:
             i = random.choice(all_but_best_bandit_idcs)
             return self.pull(self.bandits[i]), i
@@ -71,7 +75,7 @@ class Bandits():
                 pay += self.pull(bandits[i])
             mean_pay[i] += pay/self.initial_sample_num
 
-
+        # the overall pay
         mean_total_pay = np.mean(mean_pay)
 
         # number each bandit has been pulled
@@ -83,8 +87,11 @@ class Bandits():
 
         for i in range(self.num_episodes):
             current_best_bandit_idx = np.argmax(mean_pay)
+            # current_best_bandit = bandits[idx_current_best_bandit]
 
             current_all_but_best_bandit_idcs = np.delete(self.bandit_idcs, np.argmax(mean_pay))
+
+            # current_all_but_best_bandits = [bandits[i] for i in current_all_but_best_bandit_idcs]
 
             scnd_current_best_bandit_idx = np.argmax([mean_pay[i]
                                             for i in current_all_but_best_bandit_idcs])
@@ -95,6 +102,8 @@ class Bandits():
             pay_best_bandit = mean_pay[current_best_bandit_idx]
             best_bandit_var = np.sqrt(pay_best_bandit*(1-pay_best_bandit)
                                         / times_pulled[current_best_bandit_idx])
+            if best_bandit_var == 0:
+                best_bandit_var = 1/times_pulled[current_best_bandit_idx]**2
 
             pay_scnd_best_bandit = mean_pay[scnd_current_best_bandit_idx]
             scnd_best_bandit_var = np.sqrt(pay_scnd_best_bandit*(1-pay_scnd_best_bandit)
@@ -114,7 +123,7 @@ class Bandits():
 
 
             if scnd_best_bandit_var == 0:
-                epsilon = 0.001
+                epsilon = 1/N**2
             else:
                 epsilon = 1-norm.cdf(pay_best_bandit -
                                         self.cut_off* best_bandit_var,
@@ -148,9 +157,9 @@ class Bandits():
             N = updated_N
 
             if epsilon < 0.01:
-                episode_length *= 1000
+                episode_length *= 100
             else:
-                episode_length = int( episode_length / (1+epsilon))
+                episode_length *= int( 1 / np.log(1+epsilon))
 
             if N > 10000:
                 return mean_pay, mean_total_pay, N

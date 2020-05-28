@@ -32,12 +32,13 @@ class Bandits():
         self.bandit_range = bandit_range_high - bandit_range_low
         self.bandit_idcs = range(self.num_bandits)
 
-        # obtain pull function with specified paramters
+        # self.normalized_bandits = (self.bandits - self.bandit_range_low)/self.bandit_range
+
 
         self.true_best_bandit = np.argmax(self.bandits)
-        self.optimal_pay = self.bandits[self.true_best_bandit]/self.bandit_range
-        self.true_scnd_best_bandit = np.argmax(np.delete(self.bandits,self.true_best_bandit))
-        self.scnd_best_pay = self.bandits[self.true_scnd_best_bandit]/self.bandit_range
+        self.optimal_pay = (self.bandits[self.true_best_bandit]- self.bandit_range_low)/self.bandit_range
+        # self.true_scnd_best_bandit = np.argmax(np.delete(self.bandits,self.true_best_bandit))
+        # self.scnd_best_pay = (self.bandits[self.true_scnd_best_bandit]- self.bandit_range_low)/self.bandit_range
 
 
     def pull(self, bandit: float):
@@ -46,7 +47,6 @@ class Bandits():
             return 1
         else:
             return 0
-
 
 
     def epsilon_greedy_pull(self, epsilon: float, best_bandit_idx: int,
@@ -64,10 +64,10 @@ class Bandits():
 
     def run_bandits(self):
         mean_pay = np.zeros(self.num_bandits) # mean observed pay per bandit initialization
-        mean_total_pay = 0               # total observed pay initialization
+        mean_total_pay = 0                    # total observed pay initialization
 
 
-
+        # initial sampling, uniformly for all bandits
 
         for i in self.bandit_idcs:
             pay = 0
@@ -85,7 +85,6 @@ class Bandits():
         N = self.initial_sample_num * self.num_bandits
 
 
-
         for i in range(self.num_episodes):
             current_best_bandit_idx = np.argmax(mean_pay)
             # current_best_bandit = bandits[idx_current_best_bandit]
@@ -97,17 +96,31 @@ class Bandits():
             scnd_current_best_bandit_idx = np.argmax([mean_pay[i]
                                             for i in current_all_but_best_bandit_idcs])
 
+            # calculate mean and std for estimated pay of two best performing
+            # bandits
+
             pay_best_bandit = mean_pay[current_best_bandit_idx]
             best_bandit_var = np.sqrt(pay_best_bandit*(1-pay_best_bandit)
                                         / times_pulled[current_best_bandit_idx])
+            if best_bandit_var == 0:
+                best_bandit_var = 1/times_pulled[current_best_bandit_idx]**2
 
             pay_scnd_best_bandit = mean_pay[scnd_current_best_bandit_idx]
             scnd_best_bandit_var = np.sqrt(pay_scnd_best_bandit*(1-pay_scnd_best_bandit)
                                         / times_pulled[scnd_current_best_bandit_idx])
 
+            # set epsilon as a fraction of the probability that the second best
+            # bandit be better than the best one minus one std
+
             # epsilon = cut_off*(1-norm.ppf(max(pay_best_bandit - best_bandit_var,0),
             #                                 loc = pay_scnd_best_bandit,
             #                                 scale = scnd_best_bandit_var))
+            #
+
+
+            # set epsilon as the probability that the second best bandit be
+            # better than the best one minus a fraction of its std
+
 
             if scnd_best_bandit_var == 0:
                 epsilon = 0.001
@@ -115,6 +128,7 @@ class Bandits():
                 epsilon = 1-norm.cdf(pay_best_bandit -
                                         self.cut_off* best_bandit_var,
                                             loc = pay_scnd_best_bandit, scale = scnd_best_bandit_var)
+
 
             current_times_pulled = np.zeros(self.num_bandits)
             current_times_won    = np.zeros(self.num_bandits)
@@ -156,10 +170,10 @@ if __name__ == "__main__":
 
     num_bandits = 15
 
-    bandit_range_low  = 0.
-    bandit_range_high = 1.
+    bandit_range_low  = -2.
+    bandit_range_high = 5.
 
-    initial_sample_num = 15
+    initial_sample_num = 30
 
 
     num_episodes = 10000
@@ -204,7 +218,7 @@ if __name__ == "__main__":
     print("Initial uniform sampling number: {initial_sample_num}".format(initial_sample_num = initial_sample_num))
     print("Number of episodes: {num_episodes}".format(num_episodes = num_episodes))
     print("Tests succeeded: {ratio:.2f}%".format(ratio = 100* tests_suceeded/num_tests))
-    print("Average number of pulls: {M}".format(M = np.mean(times_pulled)))
+    print("Average number of pulls: {M:.2f}".format(M = np.mean(times_pulled)))
     print("The maximum pay loss was : {max_pay_loss}".format(max_pay_loss = np.max(pay_losses)))
     print("The mean pay loss was : {mean_pay_loss}".format(mean_pay_loss = np.mean(pay_losses)))
     print("The std of pay loss was : {std_pay_loss}".format(std_pay_loss = np.std(pay_losses)))
